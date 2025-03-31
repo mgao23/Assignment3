@@ -1,0 +1,50 @@
+import random
+import numpy as np
+import pandas as pd
+import networkx as nx
+from scipy.spatial.distance import euclidean
+
+
+#Builds a graph
+g = nx.Graph() 
+
+#Reads the CSV file
+data = pd.read_csv("country-wise-average.csv")
+
+#check for any null values
+print(data.isnull().sum())
+
+#only focusing on the country along with the income, overweight, underweight and stunting problem 
+new_dat = data[["Country","Income Classification", "Overweight","Stunting", "Underweight"]].dropna()
+
+#check for null values in the new data 
+print(new_dat.isnull().sum())
+
+#iterate through the table and add the nodes respectively by its country
+for i, r in new_dat.iterrows():
+    g.add_node(r["Country"],income=r["Income Classification"],overweight=r["Overweight"],stunt=r["Stunting"],underweight=r["Underweight"])
+
+for  i, r in new_dat.iterrows():
+  for k, r2 in new_dat.iterrows():
+     if i != k:
+            health_dis = euclidean(
+                [r["Overweight"], r["Stunting"], r["Underweight"]],
+                [r2["Overweight"], r2["Stunting"], r2["Underweight"]])
+            g.add_edge(r["Country"], r2["Country"], weight=1 / (1 + health_dis))  
+
+
+def similar_country (country, top = 10) :
+    if country not in g.nodes:
+        return []
+    
+    neighbors = g[country]
+    similarities = [(neighbor, g[country][neighbor]['weight']) for neighbor in neighbors]
+    similarities.sort(key=lambda x: x[1], reverse=True)  # sort by highest similarity
+    return similarities[:top]
+
+target = input("what is your target country: " )
+print("country: " + target)
+similar = similar_country(target)
+print(f"Top similar countries to {target}:")
+for country, score in similar:
+    print(f"{country}: {score:.4f}")
